@@ -1,0 +1,20 @@
+{
+  "animation_speed": 50,
+  "background_type": "solid",
+  "primary_color": "#6366F1",
+  "particle_color": "#6366F1",
+  "secondary_color": "#4F46E5",
+  "accent_color": "#F59E0B",
+  "background_color": "#1E1B4B",
+  "background_image": "",
+  "drawing_mode": "single",
+  "multi_count": 3,
+  "allow_duplicate": false,
+  "shortcuts": {
+    "start_draw": "Space",
+    "reset_draw": "R",
+    "back_standby": "Escape",
+    "open_data": "D",
+    "open_settings": "S"
+  }
+}

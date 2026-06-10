@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python *)",
+      "Bash(pip install *)",
+      "Bash(timeout 5 \"C:\\\\Users\\\\SMKF\\\\Desktop\\\\试做\\\\程序\\\\抽签\\\\dist\\\\WOTA抽签软件.exe\")"
+    ]
+  }
+}
