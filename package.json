@@ -1,0 +1,94 @@
+{
+  "name": "wotagei-tournament-v2",
+  "version": "1.0.0",
+  "description": "ヲタ芸比赛管理系统 v2",
+  "author": "Wota艺赛务组",
+  "main": "dist-electron/main.js",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "build:electron": "npm run build && electron-builder",
+    "preview": "vite preview",
+    "electron:dev": "vite --mode electron",
+    "electron:build": "npm run build && electron-builder"
+  },
+  "dependencies": {
+    "framer-motion": "^11.0.0",
+    "howler": "^2.2.4",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "tailwindcss": "^3.4.0",
+    "zustand": "^4.5.0"
+  },
+  "devDependencies": {
+    "@types/howler": "^2.2.11",
+    "@types/react": "^18.2.55",
+    "@types/react-dom": "^18.2.19",
+    "@vitejs/plugin-react": "^4.2.1",
+    "autoprefixer": "^10.4.17",
+    "electron": "^30.0.0",
+    "electron-builder": "^24.13.0",
+    "postcss": "^8.4.35",
+    "typescript": "^5.3.3",
+    "vite": "^5.1.0",
+    "vite-plugin-electron": "^0.29.0",
+    "vite-plugin-electron-renderer": "^0.14.5"
+  },
+  "build": {
+    "appId": "com.wotagei.tournament.v2",
+    "productName": "Wota艺比赛管理系统 v2",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*"
+    ],
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "category": "public.app-category.sports"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "category": "Game"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  }
+}

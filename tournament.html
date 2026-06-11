@@ -1,0 +1,1504 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STREETLIGHTER 24 - Wota艺赛事抽签系统</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg-primary: #0a0010; --bg-secondary: #1a0a2e; --bg-tertiary: #2d1b4e;
+            --accent-red: #FF2D55; --accent-pink: #FF6B8A;
+            --accent-glow: rgba(255, 45, 85, 0.4); --accent-glow-pink: rgba(255, 107, 138, 0.3);
+            --text-primary: #ffffff; --text-secondary: rgba(255,255,255,0.7); --text-muted: rgba(255,255,255,0.4);
+            --card-bg: rgba(255,255,255,0.06); --card-border: rgba(255,255,255,0.1); --card-hover: rgba(255,255,255,0.12);
+            --glass-bg: rgba(20,10,40,0.6); --glass-border: rgba(255,255,255,0.08);
+            --font-display: 'Orbitron', sans-serif; --font-body: 'Noto Sans SC', sans-serif;
+            --header-height: 80px; --footer-height: 60px;
+            --transition-fast: 0.2s cubic-bezier(0.4,0,0.2,1);
+            --transition-normal: 0.3s cubic-bezier(0.4,0,0.2,1);
+            --transition-slow: 0.6s cubic-bezier(0.4,0,0.2,1);
+        }
+        html, body { width: 100%; height: 100%; overflow: hidden; font-family: var(--font-body); color: var(--text-primary); background: var(--bg-primary); }
+        #bg-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+        #app { position: relative; z-index: 1; display: flex; flex-direction: column; width: 100%; height: 100%; }
+
+        /* Header */
+        .header { display: flex; align-items: center; justify-content: space-between; height: var(--header-height); padding: 0 32px; background: linear-gradient(180deg, rgba(10,0,16,0.95) 0%, rgba(10,0,16,0.7) 100%); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-bottom: 1px solid var(--glass-border); z-index: 10; flex-shrink: 0; }
+        .header-logo { display: flex; align-items: center; gap: 12px; min-width: 200px; }
+        .header-logo .logo-text { font-family: var(--font-display); font-size: 28px; font-weight: 900; color: var(--accent-red); letter-spacing: 4px; text-shadow: 0 0 20px var(--accent-glow), 0 0 40px var(--accent-glow); line-height: 1; }
+        .header-logo .logo-sub { font-size: 10px; color: var(--text-muted); letter-spacing: 2px; text-transform: uppercase; font-family: var(--font-display); }
+        .header-title { text-align: center; flex: 1; }
+        .header-title h1 { font-family: var(--font-display); font-size: 24px; font-weight: 800; color: var(--text-primary); letter-spacing: 6px; text-transform: uppercase; text-shadow: 0 0 30px rgba(255,255,255,0.2); }
+        .header-title .subtitle { font-size: 11px; color: var(--text-muted); letter-spacing: 3px; text-transform: uppercase; margin-top: 2px; }
+        .header-info { display: flex; align-items: center; gap: 16px; min-width: 200px; justify-content: flex-end; }
+        .header-info .info-badge { padding: 4px 12px; border-radius: 20px; background: var(--card-bg); border: 1px solid var(--card-border); font-size: 11px; color: var(--text-secondary); letter-spacing: 1px; font-family: var(--font-display); }
+        .btn-fullscreen { width: 36px; height: 36px; border-radius: 8px; border: 1px solid var(--card-border); background: var(--card-bg); color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all var(--transition-fast); font-size: 16px; }
+        .btn-fullscreen:hover { background: var(--card-hover); color: var(--text-primary); border-color: var(--accent-pink); }
+
+        /* Main */
+        .main-content { flex: 1; position: relative; overflow: hidden; }
+
+        /* Phase containers */
+        .phase-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; opacity: 0; visibility: hidden; transition: opacity 0.5s ease, visibility 0.5s ease; padding: 24px; }
+        .phase-container.active { opacity: 1; visibility: visible; }
+
+        /* ===== SPLASH SCREEN ===== */
+        .splash-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; background: var(--bg-primary); transition: opacity 0.8s ease, visibility 0.8s ease; }
+        .splash-screen.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+        .splash-logo { font-family: var(--font-display); font-size: 80px; font-weight: 900; color: var(--accent-red); letter-spacing: 12px; text-shadow: 0 0 40px var(--accent-glow), 0 0 80px var(--accent-glow); line-height: 1; margin-bottom: 16px; animation: splashPulse 2s ease-in-out infinite; }
+        .splash-subtitle { font-family: var(--font-display); font-size: 14px; letter-spacing: 6px; text-transform: uppercase; color: var(--accent-pink); margin-bottom: 8px; }
+        .splash-title { font-family: var(--font-body); font-size: 28px; font-weight: 700; color: var(--text-primary); margin-bottom: 40px; letter-spacing: 4px; }
+        .splash-info { font-family: var(--font-display); font-size: 12px; letter-spacing: 3px; color: var(--text-muted); margin-bottom: 48px; }
+        .splash-buttons { display: flex; gap: 20px; }
+        .btn-splash { height: 52px; padding: 0 48px; border: 2px solid var(--accent-red); border-radius: 12px; background: transparent; color: var(--accent-red); font-family: var(--font-display); font-size: 14px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; cursor: pointer; transition: all var(--transition-normal); }
+        .btn-splash:hover { background: var(--accent-red); color: white; box-shadow: 0 0 40px var(--accent-glow); transform: translateY(-2px); }
+        .btn-splash.primary { background: linear-gradient(135deg, var(--accent-red), #cc1144); color: white; border: none; box-shadow: 0 4px 20px rgba(255,45,85,0.3); }
+        .btn-splash.primary:hover { box-shadow: 0 6px 30px rgba(255,45,85,0.5); }
+        @keyframes splashPulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.05)} }
+
+        /* ===== CONFIG PHASE ===== */
+        .config-layout { display: grid; grid-template-columns: 1fr 1.2fr 1fr; gap: 24px; width: 100%; max-width: 1400px; height: 100%; max-height: calc(100vh - var(--header-height) - var(--footer-height) - 48px); }
+        .config-panel { background: var(--glass-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid var(--glass-border); border-radius: 16px; padding: 24px; display: flex; flex-direction: column; overflow: hidden; }
+        .config-panel .panel-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--glass-border); flex-shrink: 0; }
+        .config-panel .panel-header .panel-icon { width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, var(--accent-red), var(--accent-pink)); display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; color: white; }
+        .config-panel .panel-header h2 { font-family: var(--font-display); font-size: 13px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: var(--text-primary); }
+        .config-panel .panel-header .panel-count { margin-left: auto; font-family: var(--font-display); font-size: 12px; color: var(--accent-pink); background: rgba(255,107,138,0.1); padding: 2px 10px; border-radius: 10px; border: 1px solid rgba(255,107,138,0.2); }
+        .config-textarea { flex: 1; width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--card-border); border-radius: 10px; padding: 14px; color: var(--text-primary); font-family: var(--font-body); font-size: 14px; line-height: 1.8; resize: none; outline: none; transition: border-color var(--transition-fast); }
+        .config-textarea:focus { border-color: var(--accent-pink); box-shadow: 0 0 0 3px rgba(255,107,138,0.1); }
+        .config-textarea::placeholder { color: var(--text-muted); }
+        .g-pool-grid { flex: 1; overflow-y: auto; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; padding-right: 4px; }
+        .g-pool-item { position: relative; background: rgba(0,0,0,0.3); border: 1px solid var(--card-border); border-radius: 10px; padding: 10px 8px; text-align: center; cursor: default; transition: all var(--transition-fast); }
+        .g-pool-item:hover { border-color: var(--accent-pink); background: rgba(255,107,138,0.05); }
+        .g-pool-item .g-name { font-family: var(--font-body); font-size: 13px; font-weight: 500; color: var(--text-primary); margin-bottom: 6px; }
+        .g-pool-item .g-max { display: flex; align-items: center; justify-content: center; gap: 6px; }
+        .g-pool-item .g-max label { font-size: 10px; color: var(--text-muted); letter-spacing: 1px; text-transform: uppercase; }
+        .g-pool-item .g-max-input { width: 36px; height: 24px; background: rgba(255,255,255,0.05); border: 1px solid var(--card-border); border-radius: 6px; color: var(--accent-pink); font-family: var(--font-display); font-size: 12px; text-align: center; outline: none; }
+        .config-bottom { grid-column: 1 / -1; display: flex; align-items: center; justify-content: center; gap: 20px; padding-top: 8px; }
+        .round-name-input { width: 200px; height: 48px; background: rgba(0,0,0,0.3); border: 1px solid var(--card-border); border-radius: 12px; padding: 0 18px; color: var(--text-primary); font-family: var(--font-display); font-size: 14px; letter-spacing: 2px; outline: none; transition: border-color var(--transition-fast); }
+        .round-name-input:focus { border-color: var(--accent-red); box-shadow: 0 0 0 3px rgba(255,45,85,0.15); }
+        .round-name-input::placeholder { color: var(--text-muted); font-size: 12px; }
+        .btn-start { height: 48px; padding: 0 40px; border: none; border-radius: 12px; background: linear-gradient(135deg, var(--accent-red), #cc1144); color: white; font-family: var(--font-display); font-size: 14px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; cursor: pointer; transition: all var(--transition-normal); box-shadow: 0 4px 20px rgba(255,45,85,0.3); position: relative; overflow: hidden; }
+        .btn-start:hover { transform: translateY(-2px); box-shadow: 0 6px 30px rgba(255,45,85,0.5); }
+
+        /* ===== FORMAT & MODE SELECTORS ===== */
+        .config-selectors { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .selector-group { background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); border-radius: 12px; padding: 16px 20px; }
+        .selector-group label { display: block; font-family: var(--font-display); font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 10px; }
+        .selector-options { display: flex; gap: 8px; flex-wrap: wrap; }
+        .selector-btn { height: 32px; padding: 0 16px; border: 1px solid var(--card-border); border-radius: 8px; background: transparent; color: var(--text-secondary); font-family: var(--font-body); font-size: 13px; cursor: pointer; transition: all var(--transition-fast); }
+        .selector-btn:hover { border-color: var(--accent-pink); color: var(--text-primary); }
+        .selector-btn.active { border-color: var(--accent-red); background: rgba(255,45,85,0.1); color: var(--accent-red); }
+        .selector-desc { font-size: 11px; color: var(--text-muted); margin-top: 8px; line-height: 1.4; }
+
+        /* ===== STAGE CONFIG PANEL ===== */
+        .stage-config-panel { grid-column: 1 / -1; background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); border-radius: 16px; padding: 20px; max-height: 280px; overflow-y: auto; }
+        .stage-config-panel .panel-title { font-family: var(--font-display); font-size: 12px; letter-spacing: 3px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 16px; }
+        .stage-list { display: flex; flex-direction: column; gap: 10px; }
+        .stage-item { display: grid; grid-template-columns: 80px 1fr 1fr 1fr 1fr; gap: 10px; align-items: center; padding: 10px 14px; background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); border-radius: 10px; }
+        .stage-item:hover { background: rgba(255,255,255,0.05); }
+        .stage-item-name { font-family: var(--font-display); font-size: 11px; font-weight: 600; color: var(--accent-pink); }
+        .stage-item select { height: 28px; background: rgba(0,0,0,0.3); border: 1px solid var(--card-border); border-radius: 6px; color: var(--text-primary); font-family: var(--font-body); font-size: 12px; padding: 0 8px; outline: none; cursor: pointer; }
+        .stage-item select:focus { border-color: var(--accent-pink); }
+        .stage-item label { font-size: 9px; color: var(--text-muted); font-family: var(--font-display); letter-spacing: 1px; text-transform: uppercase; }
+        .stage-item .select-group { display: flex; flex-direction: column; gap: 4px; }
+
+        /* ===== ROUND SHOW PHASE ===== */
+        .round-show { display: flex; flex-direction: column; align-items: center; gap: 24px; }
+        .round-show .round-label { font-family: var(--font-display); font-size: 14px; letter-spacing: 6px; text-transform: uppercase; color: var(--accent-pink); }
+        .round-show .round-name { font-family: var(--font-display); font-size: 120px; font-weight: 900; color: var(--text-primary); letter-spacing: 12px; text-shadow: 0 0 60px rgba(255,255,255,0.3), 0 0 120px var(--accent-glow); line-height: 1; animation: roundPulse 2s ease-in-out infinite; }
+        .round-show .round-sub { font-size: 16px; color: var(--text-secondary); letter-spacing: 4px; text-transform: uppercase; }
+        @keyframes roundPulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.85;transform:scale(1.02)} }
+
+        /* ===== MATCH DRAW PHASE ===== */
+        .match-draw-layout { display: flex; flex-direction: column; align-items: center; gap: 32px; width: 100%; max-width: 900px; }
+        .match-draw-title { text-align: center; }
+        .match-draw-title .match-label { font-family: var(--font-display); font-size: 14px; letter-spacing: 8px; text-transform: uppercase; color: var(--accent-pink); margin-bottom: 8px; }
+        .match-draw-title .battle-text { font-family: var(--font-display); font-size: 48px; font-weight: 900; color: var(--text-primary); letter-spacing: 8px; text-shadow: 0 0 40px rgba(255,255,255,0.2); }
+        .player-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; width: 100%; }
+        .player-card { background: var(--glass-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid var(--glass-border); border-radius: 12px; padding: 20px 16px; text-align: center; transition: all var(--transition-normal); cursor: default; position: relative; overflow: hidden; font-family: var(--font-body); font-size: 16px; font-weight: 700; color: var(--text-primary); }
+        .player-card:hover { transform: translateY(-4px); border-color: var(--accent-pink); box-shadow: 0 8px 32px rgba(255,45,85,0.15); }
+        .player-card.selected { border-color: var(--accent-red); background: rgba(255,45,85,0.1); box-shadow: 0 0 30px var(--accent-glow); animation: cardGlow 1.5s ease-in-out infinite; }
+        .player-card.matched { border-color: var(--accent-pink); opacity: 0.5; transform: scale(0.95); }
+        @keyframes cardGlow { 0%,100%{box-shadow:0 0 20px var(--accent-glow)} 50%{box-shadow:0 0 40px var(--accent-glow),0 0 60px rgba(255,45,85,0.2)} }
+        .draw-status { font-family: var(--font-display); font-size: 18px; letter-spacing: 4px; color: var(--text-secondary); margin-top: 8px; }
+        .draw-status.matching { color: var(--accent-red); animation: pulse 0.8s ease-in-out infinite; }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+        .slot-machine { display: none; align-items: center; gap: 24px; margin: 16px 0; }
+        .slot-machine.active { display: flex; }
+        .slot-container { width: 200px; height: 60px; background: rgba(0,0,0,0.5); border: 2px solid var(--accent-red); border-radius: 12px; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+        .slot-display { font-family: var(--font-display); font-size: 20px; font-weight: 700; color: var(--accent-red); text-align: center; }
+        .slot-vs { font-family: var(--font-display); font-size: 24px; font-weight: 900; color: var(--text-primary); }
+        .match-result { display: none; flex-direction: column; align-items: center; gap: 16px; margin-top: 16px; }
+        .match-result.active { display: flex; }
+        .match-result-players { display: flex; align-items: center; gap: 24px; }
+        .match-result-left, .match-result-right { font-family: var(--font-body); font-size: 28px; font-weight: 900; color: var(--text-primary); padding: 12px 32px; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 12px; }
+        .match-result-vs { font-family: var(--font-display); font-size: 36px; font-weight: 900; color: var(--accent-red); text-shadow: 0 0 30px var(--accent-glow); }
+        .btn-draw { height: 48px; padding: 0 40px; border: 2px solid var(--accent-red); border-radius: 12px; background: transparent; color: var(--accent-red); font-family: var(--font-display); font-size: 14px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; cursor: pointer; transition: all var(--transition-normal); }
+        .btn-draw:hover { background: var(--accent-red); color: white; box-shadow: 0 0 30px var(--accent-glow); transform: translateY(-2px); }
+
+        /* ===== SONG DRAW PHASE ===== */
+        .song-draw-layout { display: flex; flex-direction: column; align-items: center; gap: 32px; }
+        .song-draw-status { font-family: var(--font-display); font-size: 14px; letter-spacing: 6px; text-transform: uppercase; color: var(--accent-pink); }
+        .song-slot-container { width: 500px; height: 80px; background: rgba(0,0,0,0.5); border: 2px solid var(--accent-pink); border-radius: 16px; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+        .song-slot-display { font-family: var(--font-body); font-size: 24px; font-weight: 700; color: var(--accent-pink); text-align: center; }
+        .song-slot-display.spinning { animation: slotBlur 0.1s linear infinite; }
+        @keyframes slotBlur { 0%{filter:blur(0)} 50%{filter:blur(2px)} 100%{filter:blur(0)} }
+        .btn-stop { height: 48px; padding: 0 40px; border: 2px solid var(--accent-pink); border-radius: 12px; background: transparent; color: var(--accent-pink); font-family: var(--font-display); font-size: 14px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; cursor: pointer; transition: all var(--transition-normal); }
+        .btn-stop:hover { background: var(--accent-pink); color: white; box-shadow: 0 0 30px var(--accent-glow-pink); transform: translateY(-2px); }
+
+        /* ===== G DRAW PHASE ===== */
+        .g-draw-layout { display: flex; flex-direction: column; align-items: center; gap: 24px; width: 100%; max-width: 1000px; }
+        .g-draw-player-hint { text-align: center; }
+        .g-draw-player-hint .hint-label { font-family: var(--font-display); font-size: 12px; letter-spacing: 3px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; }
+        .g-draw-player-hint .hint-name { font-family: var(--font-body); font-size: 32px; font-weight: 900; color: var(--text-primary); }
+        .g-draw-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; width: 100%; }
+        .g-draw-item { background: var(--glass-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid var(--glass-border); border-radius: 12px; padding: 16px 12px; text-align: center; cursor: pointer; transition: all var(--transition-normal); position: relative; overflow: hidden; }
+        .g-draw-item:hover:not(.depleted) { border-color: var(--accent-pink); box-shadow: 0 8px 24px rgba(255,45,85,0.15); transform: translateY(-2px); }
+        .g-draw-item.depleted { opacity: 0.35; cursor: not-allowed; background: rgba(0,0,0,0.3); }
+        .g-draw-item.depleted .g-draw-name { text-decoration: line-through; color: var(--text-muted); }
+        .g-draw-item .g-draw-name { font-family: var(--font-body); font-size: 16px; font-weight: 700; color: var(--text-primary); }
+        .g-draw-item .g-draw-count { font-family: var(--font-display); font-size: 10px; color: var(--accent-pink); margin-top: 6px; }
+        .g-draw-item.depleted .g-draw-count { color: var(--text-muted); }
+
+        /* ===== FINAL SHOW PHASE ===== */
+        .final-show-layout { display: flex; flex-direction: column; align-items: center; gap: 40px; width: 100%; max-width: 1000px; }
+        .final-match-panel { background: var(--glass-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid var(--glass-border); border-radius: 20px; padding: 48px; width: 100%; }
+        .final-match-header { text-align: center; margin-bottom: 36px; }
+        .final-match-header .match-round { font-family: var(--font-display); font-size: 12px; letter-spacing: 4px; text-transform: uppercase; color: var(--accent-pink); margin-bottom: 8px; }
+        .final-match-header .match-number { font-family: var(--font-display); font-size: 20px; font-weight: 700; color: var(--text-primary); letter-spacing: 4px; }
+        .final-match-body { display: grid; grid-template-columns: 1fr auto 1fr; gap: 32px; align-items: center; }
+        .final-player { text-align: center; }
+        .final-player .player-order { font-family: var(--font-display); font-size: 10px; letter-spacing: 3px; text-transform: uppercase; color: var(--accent-pink); margin-bottom: 8px; }
+        .final-player .player-name-final { font-family: var(--font-body); font-size: 32px; font-weight: 900; color: var(--text-primary); margin-bottom: 16px; }
+        .final-player .player-g { font-family: var(--font-body); font-size: 18px; color: var(--accent-pink); font-weight: 500; }
+        .final-vs { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+        .final-vs .vs-text { font-family: var(--font-display); font-size: 36px; font-weight: 900; color: var(--accent-red); text-shadow: 0 0 30px var(--accent-glow); }
+        .final-vs .vs-song { font-family: var(--font-body); font-size: 14px; color: var(--text-secondary); text-align: center; max-width: 160px; line-height: 1.4; }
+        .final-vs .vs-song .song-label { font-family: var(--font-display); font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--text-muted); display: block; margin-bottom: 4px; }
+        .btn-next { height: 48px; padding: 0 40px; border: 2px solid var(--accent-pink); border-radius: 12px; background: transparent; color: var(--accent-pink); font-family: var(--font-display); font-size: 13px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; cursor: pointer; transition: all var(--transition-normal); }
+        .btn-next:hover { background: var(--accent-pink); color: white; box-shadow: 0 0 30px var(--accent-glow-pink); transform: translateY(-2px); }
+
+        /* ===== RESULT ENTRY PHASE ===== */
+        .result-entry-layout { display: flex; flex-direction: column; align-items: center; gap: 40px; width: 100%; max-width: 900px; }
+        .result-entry-title { font-family: var(--font-display); font-size: 14px; letter-spacing: 6px; text-transform: uppercase; color: var(--accent-pink); text-align: center; }
+        .result-players { display: grid; grid-template-columns: 1fr auto 1fr; gap: 32px; align-items: center; width: 100%; }
+        .result-player { text-align: center; background: var(--glass-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid var(--glass-border); border-radius: 20px; padding: 40px 32px; transition: all var(--transition-normal); }
+        .result-player:hover { border-color: var(--accent-pink); transform: translateY(-4px); box-shadow: 0 8px 32px rgba(255,45,85,0.15); }
+        .result-player.winner { border-color: var(--accent-red); background: rgba(255,45,85,0.1); box-shadow: 0 0 40px var(--accent-glow); }
+        .result-player .result-player-name { font-family: var(--font-body); font-size: 28px; font-weight: 900; color: var(--text-primary); margin-bottom: 12px; }
+        .result-player .result-player-g { font-family: var(--font-body); font-size: 16px; color: var(--accent-pink); margin-bottom: 8px; }
+        .result-player .result-player-song { font-size: 12px; color: var(--text-muted); }
+        .result-vs-center { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+        .result-vs-center .vs-text { font-family: var(--font-display); font-size: 36px; font-weight: 900; color: var(--accent-red); text-shadow: 0 0 30px var(--accent-glow); }
+        .result-vs-center .vs-song { font-size: 12px; color: var(--text-secondary); text-align: center; }
+        .result-actions { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
+        .btn-result { height: 48px; padding: 0 32px; border-radius: 12px; font-family: var(--font-display); font-size: 13px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; cursor: pointer; transition: all var(--transition-normal); border: 2px solid; }
+        .btn-result-win { border-color: var(--accent-red); background: transparent; color: var(--accent-red); }
+        .btn-result-win:hover { background: var(--accent-red); color: white; box-shadow: 0 0 30px var(--accent-glow); }
+        .btn-result-draw { border-color: var(--text-muted); background: transparent; color: var(--text-muted); }
+        .btn-result-draw:hover { background: var(--text-muted); color: white; }
+        .result-hint { font-family: var(--font-display); font-size: 11px; letter-spacing: 2px; color: var(--text-muted); text-align: center; }
+        .result-hint kbd { display: inline-block; padding: 2px 8px; border: 1px solid var(--card-border); border-radius: 4px; background: rgba(255,255,255,0.05); font-family: var(--font-display); font-size: 10px; color: var(--text-secondary); margin: 0 2px; }
+
+        /* ===== CHAMPION PHASE ===== */
+        .champion-layout { display: flex; flex-direction: column; align-items: center; gap: 32px; }
+        .champion-crown { font-size: 64px; animation: crownFloat 2s ease-in-out infinite; }
+        @keyframes crownFloat { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-12px)} }
+        .champion-title { font-family: var(--font-display); font-size: 18px; letter-spacing: 8px; text-transform: uppercase; color: var(--accent-pink); text-shadow: 0 0 30px var(--accent-glow-pink); }
+        .champion-name { font-family: var(--font-body); font-size: 72px; font-weight: 900; color: var(--text-primary); text-shadow: 0 0 60px rgba(255,255,255,0.3), 0 0 120px var(--accent-glow); letter-spacing: 8px; animation: championGlow 2s ease-in-out infinite; }
+        @keyframes championGlow { 0%,100%{text-shadow:0 0 60px rgba(255,255,255,0.3),0 0 120px var(--accent-glow)} 50%{text-shadow:0 0 80px rgba(255,255,255,0.5),0 0 160px var(--accent-glow),0 0 200px rgba(255,107,138,0.2)} }
+        .champion-subtitle { font-family: var(--font-display); font-size: 12px; letter-spacing: 4px; text-transform: uppercase; color: var(--text-muted); }
+        .champion-stats { display: flex; gap: 32px; margin-top: 16px; }
+        .champion-stat { text-align: center; background: var(--glass-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid var(--glass-border); border-radius: 12px; padding: 16px 24px; }
+        .champion-stat-value { font-family: var(--font-display); font-size: 24px; font-weight: 700; color: var(--accent-pink); }
+        .champion-stat-label { font-family: var(--font-display); font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--text-muted); margin-top: 4px; }
+        .champion-actions { display: flex; gap: 16px; margin-top: 16px; }
+
+        /* ===== MODAL ===== */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 100; display: flex; align-items: center; justify-content: center; opacity: 0; visibility: hidden; transition: all var(--transition-normal); }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-box { background: var(--glass-bg); backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px); border: 1px solid var(--glass-border); border-radius: 20px; padding: 40px; text-align: center; min-width: 360px; transform: scale(0.9); transition: transform var(--transition-normal); }
+        .modal-overlay.active .modal-box { transform: scale(1); }
+        .modal-box .modal-title { font-family: var(--font-display); font-size: 12px; letter-spacing: 4px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 16px; }
+        .modal-box .modal-content { font-family: var(--font-body); font-size: 24px; font-weight: 700; color: var(--text-primary); margin-bottom: 28px; }
+        .modal-box .modal-actions { display: flex; gap: 12px; justify-content: center; }
+        .btn-modal { height: 40px; padding: 0 28px; border-radius: 10px; font-family: var(--font-display); font-size: 12px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; cursor: pointer; transition: all var(--transition-fast); }
+        .btn-modal-confirm { border: none; background: linear-gradient(135deg, var(--accent-red), #cc1144); color: white; }
+        .btn-modal-confirm:hover { box-shadow: 0 4px 20px rgba(255,45,85,0.4); transform: translateY(-1px); }
+        .btn-modal-cancel { border: 1px solid var(--card-border); background: transparent; color: var(--text-secondary); }
+        .btn-modal-cancel:hover { border-color: var(--text-secondary); color: var(--text-primary); }
+
+        /* ===== HISTORY PANEL ===== */
+        .history-panel { position: fixed; top: 0; right: -420px; width: 400px; height: 100%; background: rgba(10,0,16,0.95); backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px); border-left: 1px solid var(--glass-border); z-index: 50; transition: right 0.4s cubic-bezier(0.4,0,0.2,1); display: flex; flex-direction: column; }
+        .history-panel.open { right: 0; }
+        .history-panel-header { display: flex; align-items: center; justify-content: space-between; padding: 20px 24px; border-bottom: 1px solid var(--glass-border); flex-shrink: 0; }
+        .history-panel-header h2 { font-family: var(--font-display); font-size: 13px; font-weight: 600; letter-spacing: 3px; text-transform: uppercase; color: var(--text-primary); }
+        .history-close { width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--card-border); background: transparent; color: var(--text-secondary); cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; transition: all var(--transition-fast); }
+        .history-close:hover { background: var(--card-hover); color: var(--text-primary); }
+        .history-list { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+        .history-item { background: rgba(255,255,255,0.04); border: 1px solid var(--glass-border); border-radius: 12px; padding: 16px; transition: all var(--transition-fast); }
+        .history-item:hover { background: rgba(255,255,255,0.06); border-color: var(--card-border); }
+        .history-item-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+        .history-item-match { font-family: var(--font-display); font-size: 10px; letter-spacing: 2px; color: var(--text-muted); }
+        .history-item-winner { font-family: var(--font-display); font-size: 10px; letter-spacing: 1px; color: var(--accent-red); padding: 2px 8px; border-radius: 6px; background: rgba(255,45,85,0.1); }
+        .history-item-draw { font-family: var(--font-display); font-size: 10px; letter-spacing: 1px; color: var(--text-muted); padding: 2px 8px; border-radius: 6px; background: rgba(255,255,255,0.05); }
+        .history-item-players { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+        .history-item-p1, .history-item-p2 { font-family: var(--font-body); font-size: 16px; font-weight: 700; color: var(--text-primary); }
+        .history-item-p1.winner, .history-item-p2.winner { color: var(--accent-red); }
+        .history-item-vs { font-family: var(--font-display); font-size: 11px; color: var(--text-muted); }
+        .history-item-details { display: flex; gap: 12px; font-size: 12px; color: var(--text-secondary); }
+        .history-item-details span { display: flex; align-items: center; gap: 4px; }
+        .history-item-details .detail-label { color: var(--text-muted); font-family: var(--font-display); font-size: 9px; letter-spacing: 1px; text-transform: uppercase; }
+        .history-empty { text-align: center; padding: 40px 20px; color: var(--text-muted); font-size: 14px; }
+        .history-panel-footer { padding: 16px 24px; border-top: 1px solid var(--glass-border); flex-shrink: 0; }
+        .btn-history-clear { width: 100%; height: 36px; border: 1px solid var(--card-border); border-radius: 8px; background: transparent; color: var(--text-muted); font-family: var(--font-display); font-size: 10px; letter-spacing: 2px; text-transform: uppercase; cursor: pointer; transition: all var(--transition-fast); }
+        .btn-history-clear:hover { border-color: var(--accent-red); color: var(--accent-red); background: rgba(255,45,85,0.05); }
+
+        /* ===== STAGE MODE ===== */
+        #app.stage-mode .header { opacity: 0; visibility: hidden; height: 0; padding: 0; border: none; overflow: hidden; }
+        #app.stage-mode .footer { opacity: 0; visibility: hidden; height: 0; padding: 0; border: none; overflow: hidden; }
+        #app.stage-mode .main-content { height: 100%; }
+        #app.stage-mode .phase-container { padding: 0; }
+        #app.stage-mode .btn-draw, #app.stage-mode .btn-stop, #app.stage-mode .btn-next, #app.stage-mode .btn-result, #app.stage-mode .btn-splash, #app.stage-mode .btn-start, #app.stage-mode .result-hint { opacity: 0.15; }
+        #app.stage-mode .btn-draw:hover, #app.stage-mode .btn-stop:hover, #app.stage-mode .btn-next:hover, #app.stage-mode .btn-result:hover, #app.stage-mode .btn-splash:hover, #app.stage-mode .btn-start:hover { opacity: 1; }
+        .stage-mode-indicator { position: fixed; top: 8px; right: 8px; z-index: 200; font-family: var(--font-display); font-size: 9px; letter-spacing: 2px; color: var(--accent-red); background: rgba(0,0,0,0.6); padding: 4px 10px; border-radius: 6px; opacity: 0; visibility: hidden; transition: all var(--transition-normal); pointer-events: none; }
+        #app.stage-mode .stage-mode-indicator { opacity: 1; visibility: visible; }
+
+        /* ===== FOOTER ===== */
+        .footer { display: flex; align-items: center; justify-content: space-between; height: var(--footer-height); padding: 0 32px; background: linear-gradient(0deg, rgba(10,0,16,0.95) 0%, rgba(10,0,16,0.7) 100%); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-top: 1px solid var(--glass-border); z-index: 10; flex-shrink: 0; }
+        .footer-left { display: flex; align-items: center; gap: 10px; }
+        .footer-left .footer-label { font-family: var(--font-display); font-size: 10px; letter-spacing: 3px; text-transform: uppercase; color: var(--text-muted); }
+        .footer-left .footer-count { font-family: var(--font-display); font-size: 18px; font-weight: 700; color: var(--accent-pink); }
+        .footer-center { font-family: var(--font-display); font-size: 16px; font-weight: 800; letter-spacing: 8px; text-transform: uppercase; color: var(--text-primary); text-shadow: 0 0 20px rgba(255,255,255,0.15); }
+        .footer-right { font-family: var(--font-display); font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--text-muted); }
+
+        /* ===== SCROLLBAR ===== */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+
+        /* ===== ANIMATIONS ===== */
+        @keyframes fadeIn { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes slideInLeft { from{opacity:0;transform:translateX(-40px)} to{opacity:1;transform:translateX(0)} }
+        @keyframes slideInRight { from{opacity:0;transform:translateX(40px)} to{opacity:1;transform:translateX(0)} }
+        .animate-fade-in { animation: fadeIn 0.6s ease-out forwards; }
+        .animate-slide-left { animation: slideInLeft 0.6s ease-out forwards; }
+        .animate-slide-right { animation: slideInRight 0.6s ease-out forwards; }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 1200px) { .config-layout { grid-template-columns: 1fr 1fr; } .config-bottom { grid-column: 1 / -1; } }
+        @media (max-width: 768px) {
+            .header { padding: 0 16px; height: 60px; }
+            .header-logo .logo-text { font-size: 20px; }
+            .header-title h1 { font-size: 16px; letter-spacing: 3px; }
+            .header-info { display: none; }
+            .config-layout { grid-template-columns: 1fr; gap: 16px; }
+            .player-grid { grid-template-columns: repeat(2, 1fr); }
+            .g-draw-grid { grid-template-columns: repeat(3, 1fr); }
+            .final-match-body { grid-template-columns: 1fr; gap: 20px; }
+            .round-show .round-name { font-size: 64px; }
+            .footer { padding: 0 16px; }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="bg-canvas"></canvas>
+
+    <!-- Splash Screen -->
+    <div class="splash-screen" id="splash-screen">
+        <div class="splash-logo">SL</div>
+        <div class="splash-subtitle">STREETLIGHTER 24</div>
+        <div class="splash-title">Wota艺 Battle Tournament</div>
+        <div class="splash-info">2024 · WOTA艺赛事抽签系统</div>
+        <div class="splash-buttons">
+            <button class="btn-splash primary" id="btn-splash-start">开始比赛</button>
+            <button class="btn-splash" id="btn-splash-config">进入配置</button>
+        </div>
+    </div>
+
+    <div id="app">
+        <div class="stage-mode-indicator">STAGE MODE</div>
+        <header class="header">
+            <div class="header-logo">
+                <div>
+                    <div class="logo-text">SL</div>
+                    <div class="logo-sub">Tournament System</div>
+                </div>
+            </div>
+            <div class="header-title">
+                <h1>STREETLIGHTER 24</h1>
+                <div class="subtitle">Wota艺 Battle Tournament</div>
+            </div>
+            <div class="header-info">
+                <span class="info-badge">2024</span>
+                <button class="btn-fullscreen" id="btn-history" title="历史记录">&#x1D4DD;</button>
+                <button class="btn-fullscreen" id="btn-stage-mode" title="舞台模式 (S)">&#x1D3F5;</button>
+                <button class="btn-fullscreen" id="btn-fullscreen" title="全屏模式">&#x26F6;</button>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <!-- CONFIG -->
+            <div class="phase-container active" id="phase-config">
+                <div class="config-layout">
+                    <div class="config-panel">
+                        <div class="panel-header">
+                            <div class="panel-icon">P</div>
+                            <h2>选手列表</h2>
+                            <span class="panel-count" id="player-count">16</span>
+                        </div>
+                        <textarea class="config-textarea" id="players-input" placeholder="每行一个选手名字..."></textarea>
+                    </div>
+                    <div class="config-panel">
+                        <div class="panel-header">
+                            <div class="panel-icon">G</div>
+                            <h2>G-Pool 配置</h2>
+                            <span class="panel-count" id="g-pool-count">16</span>
+                        </div>
+                        <div class="g-pool-grid" id="g-pool-config-grid"></div>
+                    </div>
+                    <div class="config-panel">
+                        <div class="panel-header">
+                            <div class="panel-icon">M</div>
+                            <h2>歌曲池</h2>
+                            <span class="panel-count" id="song-count">16</span>
+                        </div>
+                        <textarea class="config-textarea" id="songs-input" placeholder="每行一首歌曲..."></textarea>
+                    </div>
+                    <div class="config-selectors">
+                        <div class="selector-group">
+                            <label>赛制 Format</label>
+                            <div class="selector-options" id="format-selector">
+                                <button class="selector-btn active" data-format="single">单败淘汰</button>
+                                <button class="selector-btn" data-format="double">双败淘汰</button>
+                                <button class="selector-btn" data-format="swiss">瑞士轮</button>
+                                <button class="selector-btn" data-format="bo3">BO3</button>
+                                <button class="selector-btn" data-format="bo5">BO5</button>
+                            </div>
+                            <div class="selector-desc" id="format-desc">单败淘汰：输一场即淘汰，直到决出冠军</div>
+                        </div>
+                        <div class="selector-group">
+                            <label>比赛方式 Match Mode</label>
+                            <div class="selector-options" id="mode-selector">
+                                <button class="selector-btn active" data-mode="simultaneous">同台竞技</button>
+                                <button class="selector-btn" data-mode="alternating">轮流竞技</button>
+                                <button class="selector-btn" data-mode="attack">对攻模式</button>
+                            </div>
+                            <div class="selector-desc" id="mode-desc">同台竞技：两位选手同时上场，同时演绎</div>
+                        </div>
+                    </div>
+                    <div class="stage-config-panel" id="stage-config-panel">
+                        <div class="panel-title">Round Config / 轮次配置</div>
+                        <div class="stage-list" id="stage-list">
+                            <div style="color:var(--text-muted);font-size:13px;text-align:center;padding:20px;">请先选择赛制，系统将自动生成轮次配置</div>
+                        </div>
+                    </div>
+                    <div class="config-bottom">
+                        <input type="text" class="round-name-input" id="round-name-input" placeholder="轮次名称 (如: 16 - 8)">
+                        <button class="btn-start" id="btn-start-tournament">开始比赛</button>
+                    </div>
+                    <div class="config-bottom" style="gap:12px;">
+                        <button class="btn-splash" id="btn-export-config" style="height:36px;padding:0 20px;font-size:10px;">导出配置</button>
+                        <button class="btn-splash" id="btn-import-config" style="height:36px;padding:0 20px;font-size:10px;">导入配置</button>
+                        <input type="file" id="file-import" accept=".json" style="display:none;">
+                    </div>
+                </div>
+            </div>
+
+            <!-- ROUND_SHOW -->
+            <div class="phase-container" id="phase-round-show">
+                <div class="round-show">
+                    <div class="round-label">CURRENT ROUND</div>
+                    <div class="round-name" id="round-show-name">16 - 8</div>
+                    <div class="round-sub">准备开始</div>
+                </div>
+            </div>
+
+            <!-- MATCH_DRAW -->
+            <div class="phase-container" id="phase-match-draw">
+                <div class="match-draw-layout">
+                    <div class="match-draw-title">
+                        <div class="match-label">MATCH</div>
+                        <div class="battle-text">BATTLE START</div>
+                    </div>
+                    <div class="player-grid" id="player-grid"></div>
+                    <div class="slot-machine" id="slot-machine">
+                        <div class="slot-container">
+                            <div class="slot-display" id="slot-display">?</div>
+                        </div>
+                        <div class="slot-vs">VS</div>
+                        <div class="slot-container">
+                            <div class="slot-display" id="slot-display-right">?</div>
+                        </div>
+                    </div>
+                    <div class="draw-status" id="draw-status">READY</div>
+                    <div class="match-result" id="match-result">
+                        <div class="match-result-players">
+                            <div class="match-result-left" id="match-result-left">--</div>
+                            <div class="match-result-vs">VS</div>
+                            <div class="match-result-right" id="match-result-right">--</div>
+                        </div>
+                    </div>
+                    <button class="btn-draw" id="btn-start-draw">开始抽选</button>
+                </div>
+            </div>
+
+            <!-- SONG_DRAW -->
+            <div class="phase-container" id="phase-song-draw">
+                <div class="song-draw-layout">
+                    <div class="song-draw-status">SELECTING MUSIC...</div>
+                    <div class="song-slot-container">
+                        <div class="song-slot-display" id="song-slot-display">?</div>
+                    </div>
+                    <button class="btn-stop" id="btn-stop-song">停止</button>
+                </div>
+            </div>
+
+            <!-- G_DRAW -->
+            <div class="phase-container" id="phase-g-draw">
+                <div class="g-draw-layout">
+                    <div class="g-draw-player-hint">
+                        <div class="hint-label">正在为以下选手选择 G</div>
+                        <div class="hint-name" id="g-draw-player-name">--</div>
+                    </div>
+                    <div class="g-draw-grid" id="g-draw-grid"></div>
+                </div>
+            </div>
+
+            <!-- FINAL_SHOW -->
+            <div class="phase-container" id="phase-final-show">
+                <div class="final-show-layout">
+                    <div class="final-match-panel" id="final-panel">
+                        <div class="final-match-header">
+                            <div class="match-round" id="final-round">ROUND 1</div>
+                            <div class="match-number" id="final-match-number">MATCH 1</div>
+                        </div>
+                        <div class="final-match-body">
+                            <div class="final-player animate-slide-left">
+                                <div class="player-order">FIRST</div>
+                                <div class="player-name-final" id="final-player1">--</div>
+                                <div class="player-g" id="final-g1">--</div>
+                            </div>
+                            <div class="final-vs">
+                                <div class="vs-text">VS</div>
+                                <div class="vs-song">
+                                    <span class="song-label">MUSIC</span>
+                                    <span id="final-song">--</span>
+                                </div>
+                            </div>
+                            <div class="final-player animate-slide-right">
+                                <div class="player-order">SECOND</div>
+                                <div class="player-name-final" id="final-player2">--</div>
+                                <div class="player-g" id="final-g2">--</div>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="btn-next" id="btn-next-match">下一组</button>
+                </div>
+            </div>
+
+            <!-- RESULT_ENTRY -->
+            <div class="phase-container" id="phase-result-entry">
+                <div class="result-entry-layout">
+                    <div class="result-entry-title">RESULT ENTRY</div>
+                    <div class="result-players">
+                        <div class="result-player" id="result-player1-box">
+                            <div class="result-player-name" id="result-player1-name">--</div>
+                            <div class="result-player-g" id="result-player1-g">--</div>
+                            <div class="result-player-song" id="result-player1-song">--</div>
+                        </div>
+                        <div class="result-vs-center">
+                            <div class="vs-text">VS</div>
+                            <div class="vs-song" id="result-entry-song">--</div>
+                        </div>
+                        <div class="result-player" id="result-player2-box">
+                            <div class="result-player-name" id="result-player2-name">--</div>
+                            <div class="result-player-g" id="result-player2-g">--</div>
+                            <div class="result-player-song" id="result-player2-song">--</div>
+                        </div>
+                    </div>
+                    <div class="result-actions">
+                        <button class="btn-result btn-result-win" id="btn-win-p1">选手1 获胜</button>
+                        <button class="btn-result btn-result-win" id="btn-win-p2">选手2 获胜</button>
+                        <button class="btn-result btn-result-draw" id="btn-draw">平局 (重赛)</button>
+                    </div>
+                    <div class="result-hint">
+                        <kbd>1</kbd> 选手1胜 <kbd>2</kbd> 选手2胜 <kbd>3</kbd> 平局
+                    </div>
+                </div>
+            </div>
+
+            <!-- CHAMPION -->
+            <div class="phase-container" id="phase-champion">
+                <div class="champion-layout">
+                    <div class="champion-crown">&#x1F3C6;</div>
+                    <div class="champion-title">CHAMPION</div>
+                    <div class="champion-name" id="champion-name">--</div>
+                    <div class="champion-subtitle" id="champion-subtitle">STREETLIGHTER 24</div>
+                    <div class="champion-stats">
+                        <div class="champion-stat">
+                            <div class="champion-stat-value" id="champion-total-matches">0</div>
+                            <div class="champion-stat-label">Total Matches</div>
+                        </div>
+                        <div class="champion-stat">
+                            <div class="champion-stat-value" id="champion-wins">0</div>
+                            <div class="champion-stat-label">Wins</div>
+                        </div>
+                        <div class="champion-stat">
+                            <div class="champion-stat-value" id="champion-win-rate">0%</div>
+                            <div class="champion-stat-label">Win Rate</div>
+                        </div>
+                    </div>
+                    <div class="champion-actions">
+                        <button class="btn-splash primary" id="btn-champion-home">返回主页</button>
+                        <button class="btn-splash" id="btn-champion-export">导出结果</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer class="footer">
+            <div class="footer-left">
+                <span class="footer-label">MATCHES</span>
+                <span class="footer-count" id="footer-match-count">0</span>
+            </div>
+            <div class="footer-center">STREETLIGHTER 24</div>
+            <div class="footer-right">WOTA艺 TOURNAMENT SYSTEM</div>
+        </footer>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal-overlay" id="g-confirm-modal">
+        <div class="modal-box">
+            <div class="modal-title">确认选择</div>
+            <div class="modal-content" id="g-confirm-text">--</div>
+            <div class="modal-actions">
+                <button class="btn-modal btn-modal-cancel" id="g-confirm-cancel">取消</button>
+                <button class="btn-modal btn-modal-confirm" id="g-confirm-ok">确认</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- History Panel -->
+    <div class="history-panel" id="history-panel">
+        <div class="history-panel-header">
+            <h2>Match History</h2>
+            <button class="history-close" id="btn-history-close">&times;</button>
+        </div>
+        <div class="history-list" id="history-list">
+            <div class="history-empty">暂无比赛记录</div>
+        </div>
+        <div class="history-panel-footer">
+            <button class="btn-history-clear" id="btn-history-clear">Clear All</button>
+        </div>
+    </div>
+
+    <script>
+    const DEFAULT_PLAYERS = ["加速","Rebel","Kohana","方","玄白","小魄","阿菜","三百斤萝卜","佬宋","空果","Furikiri","aofu","角丸","宇宙","可恶","纳助"];
+    const DEFAULT_G_POOL = [{name:"育樱",max:2},{name:"红樱",max:2},{name:"天狼星",max:2},{name:"九吹雪",max:2},{name:"el",max:2},{name:"力",max:2},{name:"煌刀",max:2},{name:"雷蛇",max:2},{name:"Muramasa",max:2},{name:"迅",max:2},{name:"炎",max:2},{name:"冻",max:2},{name:"风",max:2},{name:"光",max:2},{name:"暗",max:2},{name:"空",max:2}];
+    const DEFAULT_SONGS = ["AnythingGoes! (TV Size)","Burning Heart!","Catalyst","Cobalt","Deja Vu","Eternal Flame","Flyers!!!","Gira Gira","Heavenly Blue","Ignite","Journey","Kakumei","Luminous","Magnetic","No Limit","Outrage"];
+
+    const Phase = { SPLASH:'SPLASH', CONFIG:'CONFIG', ROUND_SHOW:'ROUND_SHOW', MATCH_DRAW:'MATCH_DRAW', SONG_DRAW:'SONG_DRAW', G_DRAW:'G_DRAW', FINAL_SHOW:'FINAL_SHOW', RESULT_ENTRY:'RESULT_ENTRY', CHAMPION:'CHAMPION' };
+
+    const state = {
+        currentPhase: Phase.SPLASH,
+        players: [...DEFAULT_PLAYERS],
+        gPool: DEFAULT_G_POOL.map(g => ({...g, used:0})),
+        songs: [...DEFAULT_SONGS],
+        roundName: '',
+        currentMatchIndex: 0,
+        matches: [],
+        currentDrawMatch: null,
+        currentGPlayer: null,
+        remainingPlayers: [],
+        format: 'single',
+        matchMode: 'simultaneous',
+        stages: [],
+        currentStageIndex: 0,
+    };
+
+    const FORMAT_DESC = {
+        single: '单败淘汰：输一场即淘汰，直到决出冠军',
+        double: '双败淘汰：输两场才淘汰，有胜者组和败者组',
+        swiss: '瑞士轮：每轮对阵成绩相近的选手，按积分排名',
+        bo3: 'BO3：三局两胜制，先赢两局者获胜',
+        bo5: 'BO5：五局三胜制，先赢三局者获胜'
+    };
+
+    const MODE_DESC = {
+        simultaneous: '同台竞技：两位选手同时上场，同时演绎',
+        alternating: '轮流竞技：两位选手轮流上场，分别演绎',
+        attack: '对攻模式：一位选手演绎，另一位在特定时机切入'
+    };
+
+    function transitionTo(newPhase) {
+        if (newPhase === Phase.SPLASH) {
+            document.getElementById('splash-screen').classList.remove('hidden');
+            document.querySelectorAll('.phase-container').forEach(el => el.classList.remove('active'));
+            state.currentPhase = newPhase;
+            return;
+        }
+        document.getElementById('splash-screen').classList.add('hidden');
+        document.querySelectorAll('.phase-container').forEach(el => el.classList.remove('active'));
+        const targetId = 'phase-' + newPhase.toLowerCase().replace('_', '-');
+        const targetEl = document.getElementById(targetId);
+        if (targetEl) targetEl.classList.add('active');
+        state.currentPhase = newPhase;
+        switch (newPhase) {
+            case Phase.CONFIG: onEnterConfig(); break;
+            case Phase.ROUND_SHOW: onEnterRoundShow(); break;
+            case Phase.MATCH_DRAW: onEnterMatchDraw(); break;
+            case Phase.SONG_DRAW: onEnterSongDraw(); break;
+            case Phase.G_DRAW: onEnterGDraw(); break;
+            case Phase.FINAL_SHOW: onEnterFinalShow(); break;
+            case Phase.RESULT_ENTRY: onEnterResultEntry(); break;
+            case Phase.CHAMPION: onEnterChampion(); break;
+        }
+    }
+
+    function onEnterConfig() { initConfig(); }
+    function onEnterRoundShow() {
+        const currentStage = state.stages[state.currentStageIndex];
+        const el = document.getElementById('round-show-name');
+        el.textContent = state.roundName;
+        el.style.animation = 'none';
+        el.offsetHeight;
+        el.style.animation = '';
+        // Update subtitle with format and mode info
+        const sub = document.querySelector('.round-show .round-sub');
+        if (currentStage) {
+            const modeText = { simultaneous: '同台竞技', alternating: '轮流竞技', attack: '对攻模式' };
+            const songText = { random: '随机歌曲', player: '选手选曲', organizer: '组委会指定' };
+            const techText = { draw: '技池抽取', free: '自由技', random: '系统随机', none: '无技' };
+            sub.textContent = `${modeText[currentStage.matchMode] || ''} · ${songText[currentStage.songSource] || ''} · ${techText[currentStage.techSource] || ''}`;
+            // Apply background style
+            if (currentStage.bgStyle === 'dark') {
+                document.getElementById('bg-canvas').style.opacity = '0.3';
+            } else {
+                document.getElementById('bg-canvas').style.opacity = '1';
+            }
+        }
+        setTimeout(() => transitionTo(Phase.MATCH_DRAW), 3000);
+    }
+    function onEnterMatchDraw() {
+        const grid = document.getElementById('player-grid');
+        grid.innerHTML = '';
+        state.remainingPlayers.forEach((name, i) => {
+            const card = document.createElement('div');
+            card.className = 'player-card';
+            card.textContent = name;
+            card.dataset.index = i;
+            card.style.animationDelay = (i * 0.05) + 's';
+            grid.appendChild(card);
+        });
+        document.getElementById('draw-status').textContent = 'READY';
+        document.getElementById('draw-status').classList.remove('matching');
+        document.getElementById('btn-start-draw').style.display = '';
+        document.getElementById('match-result').classList.remove('active');
+        document.getElementById('slot-machine').classList.remove('active');
+    }
+
+    let songSlotInterval = null;
+    function onEnterSongDraw() {
+        const display = document.getElementById('song-slot-display');
+        display.classList.add('spinning');
+        songSlotInterval = setInterval(() => {
+            display.textContent = state.songs[Math.floor(Math.random() * state.songs.length)];
+        }, 80);
+        document.getElementById('btn-stop-song').style.display = '';
+    }
+
+    function onEnterGDraw() {
+        const grid = document.getElementById('g-draw-grid');
+        grid.innerHTML = '';
+        state.gPool.forEach((g, index) => {
+            const item = document.createElement('div');
+            item.className = 'g-draw-item';
+            if (g.used >= g.max) item.classList.add('depleted');
+            item.dataset.index = index;
+            item.innerHTML = `<div class="g-draw-name">${escapeHtml(g.name)}</div><div class="g-draw-count">${g.used}/${g.max}</div>`;
+            grid.appendChild(item);
+        });
+        const playerName = state.currentGPlayer === 1 ? state.currentDrawMatch.player1 : state.currentDrawMatch.player2;
+        document.getElementById('g-draw-player-name').textContent = playerName;
+    }
+
+    function onEnterFinalShow() {
+        const m = state.currentDrawMatch;
+        document.getElementById('final-round').textContent = state.roundName;
+        document.getElementById('final-match-number').textContent = 'MATCH ' + (state.currentMatchIndex + 1);
+        document.getElementById('final-player1').textContent = m.player1;
+        document.getElementById('final-player2').textContent = m.player2;
+        document.getElementById('final-song').textContent = m.song;
+        document.getElementById('final-g1').textContent = m.g1 || '-';
+        document.getElementById('final-g2').textContent = m.g2 || '-';
+        const orderLeft = document.querySelector('#final-panel .final-player:first-child .player-order');
+        const orderRight = document.querySelector('#final-panel .final-player:last-child .player-order');
+        if (m.firstAttack === 1) {
+            orderLeft.textContent = 'FIRST ATTACK';
+            orderRight.textContent = 'SECOND';
+        } else {
+            orderLeft.textContent = 'SECOND';
+            orderRight.textContent = 'FIRST ATTACK';
+        }
+        const panel = document.getElementById('final-panel');
+        panel.style.animation = 'none';
+        panel.offsetHeight;
+        panel.style.animation = '';
+        setTimeout(() => {
+            if (state.currentPhase === Phase.FINAL_SHOW) {
+                transitionTo(Phase.RESULT_ENTRY);
+            }
+        }, 5000);
+    }
+
+    function onEnterResultEntry() {
+        const m = state.currentDrawMatch;
+        document.getElementById('result-player1-name').textContent = m.player1;
+        document.getElementById('result-player1-g').textContent = 'G: ' + (m.g1 || '-');
+        document.getElementById('result-player1-song').textContent = m.song || '-';
+        document.getElementById('result-player2-name').textContent = m.player2;
+        document.getElementById('result-player2-g').textContent = 'G: ' + (m.g2 || '-');
+        document.getElementById('result-player2-song').textContent = m.song || '-';
+        document.getElementById('result-entry-song').textContent = m.song || '-';
+        document.getElementById('result-player1-box').classList.remove('winner');
+        document.getElementById('result-player2-box').classList.remove('winner');
+    }
+
+    function onEnterChampion() {
+        const winCount = {};
+        state.matches.forEach(m => {
+            if (m.winner && m.winner !== 'draw') {
+                winCount[m.winner] = (winCount[m.winner] || 0) + 1;
+            }
+        });
+        let champion = '--';
+        let maxWins = 0;
+        for (const [name, wins] of Object.entries(winCount)) {
+            if (wins > maxWins) { maxWins = wins; champion = name; }
+        }
+        document.getElementById('champion-name').textContent = champion;
+        document.getElementById('champion-total-matches').textContent = state.matches.length;
+        document.getElementById('champion-wins').textContent = maxWins;
+        const rate = state.matches.length > 0 ? Math.round((maxWins / state.matches.length) * 100) : 0;
+        document.getElementById('champion-win-rate').textContent = rate + '%';
+    }
+
+    // Canvas Background
+    (function initCanvasBackground() {
+        const canvas = document.getElementById('bg-canvas');
+        const ctx = canvas.getContext('2d');
+        let width, height, particles = [], animFrameId;
+        function resize() { width = canvas.width = window.innerWidth; height = canvas.height = window.innerHeight; }
+        class Particle {
+            constructor() { this.reset(); }
+            reset() {
+                this.x = Math.random() * width; this.y = Math.random() * height;
+                this.size = Math.random() * 2 + 0.5;
+                this.speedX = (Math.random() - 0.5) * 0.5; this.speedY = (Math.random() - 0.5) * 0.5;
+                this.opacity = Math.random() * 0.5 + 0.1; this.hue = Math.random() > 0.7 ? 340 : 280;
+                this.life = Math.random() * 200 + 100; this.maxLife = this.life;
+            }
+            update() { this.x += this.speedX; this.y += this.speedY; this.life--; if (this.life <= 0 || this.x < -10 || this.x > width + 10 || this.y < -10 || this.y > height + 10) this.reset(); }
+            draw() { const fadeRatio = this.life / this.maxLife; const alpha = this.opacity * fadeRatio; ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fillStyle = `hsla(${this.hue},80%,65%,${alpha})`; ctx.fill(); }
+        }
+        function initParticles() { particles = []; const count = Math.min(Math.floor((width * height) / 8000), 200); for (let i = 0; i < count; i++) particles.push(new Particle()); }
+        function drawFluidGradient(time) {
+            const t = time * 0.0003;
+            const g = ctx.createLinearGradient(0, 0, width, height);
+            g.addColorStop(0, '#0a0010'); g.addColorStop(0.3, '#1a0a2e'); g.addColorStop(0.6, '#0d0520'); g.addColorStop(1, '#0a0010');
+            ctx.fillStyle = g; ctx.fillRect(0, 0, width, height);
+            drawGlowBlob(width * (0.3 + Math.sin(t * 0.5) * 0.2), height * (0.4 + Math.cos(t * 0.3) * 0.2), Math.max(200, width * 0.25), 'rgba(255,45,85,0.03)', 'rgba(255,45,85,0)');
+            drawGlowBlob(width * (0.7 + Math.cos(t * 0.4) * 0.15), height * (0.6 + Math.sin(t * 0.6) * 0.15), Math.max(250, width * 0.3), 'rgba(100,40,180,0.04)', 'rgba(100,40,180,0)');
+            drawGlowBlob(width * (0.5 + Math.sin(t * 0.7) * 0.25), height * (0.3 + Math.cos(t * 0.5) * 0.2), Math.max(180, width * 0.2), 'rgba(255,107,138,0.02)', 'rgba(255,107,138,0)');
+        }
+        function drawGlowBlob(x, y, radius, colorInner, colorOuter) {
+            radius = Math.max(1, radius);
+            const grad = ctx.createRadialGradient(x, y, 0, x, y, radius);
+            grad.addColorStop(0, colorInner); grad.addColorStop(1, colorOuter);
+            ctx.fillStyle = grad; ctx.fillRect(x - radius, y - radius, radius * 2, radius * 2);
+        }
+        function drawConnections() {
+            const maxDist = 120;
+            for (let i = 0; i < particles.length; i++) {
+                for (let j = i + 1; j < particles.length; j++) {
+                    const dx = particles[i].x - particles[j].x, dy = particles[i].y - particles[j].y, dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < maxDist) { const alpha = (1 - dist / maxDist) * 0.08; ctx.beginPath(); ctx.moveTo(particles[i].x, particles[i].y); ctx.lineTo(particles[j].x, particles[j].y); ctx.strokeStyle = `rgba(255,107,138,${alpha})`; ctx.lineWidth = 0.5; ctx.stroke(); }
+                }
+            }
+        }
+        function animate(time) {
+            ctx.clearRect(0, 0, width, height);
+            drawFluidGradient(time);
+            for (const p of particles) { p.update(); p.draw(); }
+            drawConnections();
+            animFrameId = requestAnimationFrame(animate);
+        }
+        resize(); initParticles(); animate(0);
+        window.addEventListener('resize', () => { resize(); initParticles(); });
+    })();
+
+    function initConfig() {
+        document.getElementById('players-input').value = state.players.join('\n');
+        document.getElementById('songs-input').value = state.songs.join('\n');
+        renderGPoolConfig();
+        document.getElementById('round-name-input').value = state.roundName || '';
+        updateConfigCounts();
+    }
+
+    function renderGPoolConfig() {
+        const grid = document.getElementById('g-pool-config-grid');
+        grid.innerHTML = '';
+        state.gPool.forEach((g, index) => {
+            const item = document.createElement('div');
+            item.className = 'g-pool-item';
+            item.innerHTML = `<div class="g-name">${escapeHtml(g.name)}</div><div class="g-max"><label>MAX</label><input type="number" class="g-max-input" value="${g.max}" min="0" max="10" data-index="${index}"></div>`;
+            grid.appendChild(item);
+        });
+        grid.querySelectorAll('.g-max-input').forEach(input => {
+            input.addEventListener('change', (e) => { const idx = parseInt(e.target.dataset.index); const val = parseInt(e.target.value) || 0; state.gPool[idx].max = Math.max(0, Math.min(10, val)); });
+        });
+    }
+
+    function updateConfigCounts() {
+        const playersText = document.getElementById('players-input').value.trim();
+        const playerNames = playersText ? playersText.split('\n').filter(n => n.trim()) : [];
+        document.getElementById('player-count').textContent = playerNames.length;
+        document.getElementById('footer-match-count').textContent = state.matches.length;
+        const songsText = document.getElementById('songs-input').value.trim();
+        const songNames = songsText ? songsText.split('\n').filter(n => n.trim()) : [];
+        document.getElementById('song-count').textContent = songNames.length;
+        document.getElementById('g-pool-count').textContent = state.gPool.length;
+    }
+
+    function escapeHtml(str) { const div = document.createElement('div'); div.textContent = str; return div.innerHTML; }
+
+    // Event Listeners
+    document.getElementById('players-input').addEventListener('input', updateConfigCounts);
+    document.getElementById('songs-input').addEventListener('input', updateConfigCounts);
+
+    // Format selector
+    document.getElementById('format-selector').addEventListener('click', (e) => {
+        const btn = e.target.closest('.selector-btn');
+        if (!btn) return;
+        document.querySelectorAll('#format-selector .selector-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        state.format = btn.dataset.format;
+        document.getElementById('format-desc').textContent = FORMAT_DESC[state.format];
+        // Auto-generate stage config preview
+        updateStageConfigPreview();
+    });
+
+    function updateStageConfigPreview() {
+        const list = document.getElementById('stage-list');
+        const playerCount = state.players.length;
+        if (playerCount < 2) {
+            list.innerHTML = '<div style="color:var(--text-muted);font-size:13px;text-align:center;padding:20px;">请至少添加2名选手</div>';
+            return;
+        }
+        // Generate preview stages based on format
+        const previewStages = [];
+        switch (state.format) {
+            case 'single':
+                let remaining = playerCount;
+                let roundNum = 1;
+                while (remaining > 1) {
+                    const nextRound = Math.ceil(remaining / 2);
+                    previewStages.push({
+                        name: remaining + ' - ' + nextRound,
+                        round: roundNum,
+                        matchMode: state.matchMode,
+                        songSource: 'random',
+                        techSource: 'draw'
+                    });
+                    remaining = nextRound;
+                    roundNum++;
+                }
+                break;
+            case 'double':
+                let wb = playerCount;
+                let roundNum2 = 1;
+                while (wb > 1) {
+                    const nextWB = Math.ceil(wb / 2);
+                    previewStages.push({
+                        name: 'WB ' + wb + ' - ' + nextWB,
+                        round: roundNum2,
+                        matchMode: state.matchMode,
+                        songSource: 'random',
+                        techSource: 'draw'
+                    });
+                    wb = nextWB;
+                    roundNum2++;
+                }
+                break;
+            case 'swiss':
+                const swissRounds = Math.ceil(Math.log2(playerCount));
+                for (let i = 1; i <= swissRounds; i++) {
+                    previewStages.push({
+                        name: 'Swiss R' + i,
+                        round: i,
+                        matchMode: state.matchMode,
+                        songSource: 'random',
+                        techSource: 'draw'
+                    });
+                }
+                break;
+            case 'bo3':
+                previewStages.push({
+                    name: 'BO3',
+                    round: 1,
+                    matchMode: state.matchMode,
+                    songSource: 'random',
+                    techSource: 'draw'
+                });
+                break;
+            case 'bo5':
+                previewStages.push({
+                    name: 'BO5',
+                    round: 1,
+                    matchMode: state.matchMode,
+                    songSource: 'random',
+                    techSource: 'draw'
+                });
+                break;
+        }
+        // Store preview stages
+        state.previewStages = previewStages;
+        renderStageConfigList();
+    }
+
+    function renderStageConfigList() {
+        const list = document.getElementById('stage-list');
+        if (!state.previewStages || state.previewStages.length === 0) {
+            list.innerHTML = '<div style="color:var(--text-muted);font-size:13px;text-align:center;padding:20px;">请先选择赛制</div>';
+            return;
+        }
+        list.innerHTML = '';
+        state.previewStages.forEach((stage, index) => {
+            const item = document.createElement('div');
+            item.className = 'stage-item';
+            item.innerHTML = `
+                <div class="stage-item-name">${escapeHtml(stage.name)}</div>
+                <div class="select-group">
+                    <label>比赛方式</label>
+                    <select data-index="${index}" data-field="matchMode">
+                        <option value="simultaneous" ${stage.matchMode === 'simultaneous' ? 'selected' : ''}>同台竞技</option>
+                        <option value="alternating" ${stage.matchMode === 'alternating' ? 'selected' : ''}>轮流竞技</option>
+                        <option value="attack" ${stage.matchMode === 'attack' ? 'selected' : ''}>对攻模式</option>
+                    </select>
+                </div>
+                <div class="select-group">
+                    <label>歌曲来源</label>
+                    <select data-index="${index}" data-field="songSource">
+                        <option value="random" ${stage.songSource === 'random' ? 'selected' : ''}>随机抽取</option>
+                        <option value="player" ${stage.songSource === 'player' ? 'selected' : ''}>选手自选</option>
+                        <option value="organizer" ${stage.songSource === 'organizer' ? 'selected' : ''}>组委会指定</option>
+                    </select>
+                </div>
+                <div class="select-group">
+                    <label>技来源</label>
+                    <select data-index="${index}" data-field="techSource">
+                        <option value="draw" ${stage.techSource === 'draw' ? 'selected' : ''}>技池抽取</option>
+                        <option value="free" ${stage.techSource === 'free' ? 'selected' : ''}>自由技</option>
+                        <option value="random" ${stage.techSource === 'random' ? 'selected' : ''}>系统随机</option>
+                        <option value="none" ${stage.techSource === 'none' ? 'selected' : ''}>无技</option>
+                    </select>
+                </div>
+                <div class="select-group">
+                    <label>背景风格</label>
+                    <select data-index="${index}" data-field="bgStyle">
+                        <option value="particle" ${(stage.bgStyle || 'particle') === 'particle' ? 'selected' : ''}>粒子效果</option>
+                        <option value="dark" ${stage.bgStyle === 'dark' ? 'selected' : ''}>纯黑背景</option>
+                    </select>
+                </div>
+            `;
+            list.appendChild(item);
+        });
+        // Add change listeners
+        list.querySelectorAll('select').forEach(select => {
+            select.addEventListener('change', (e) => {
+                const index = parseInt(e.target.dataset.index);
+                const field = e.target.dataset.field;
+                state.previewStages[index][field] = e.target.value;
+            });
+        });
+    }
+
+    // Mode selector
+    document.getElementById('mode-selector').addEventListener('click', (e) => {
+        const btn = e.target.closest('.selector-btn');
+        if (!btn) return;
+        document.querySelectorAll('#mode-selector .selector-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        state.matchMode = btn.dataset.mode;
+        document.getElementById('mode-desc').textContent = MODE_DESC[state.matchMode];
+    });
+
+    document.getElementById('btn-start-tournament').addEventListener('click', () => {
+        const playersText = document.getElementById('players-input').value.trim();
+        state.players = playersText ? playersText.split('\n').map(n => n.trim()).filter(n => n) : [];
+        const songsText = document.getElementById('songs-input').value.trim();
+        state.songs = songsText ? songsText.split('\n').map(n => n.trim()).filter(n => n) : [];
+        state.roundName = document.getElementById('round-name-input').value.trim() || '比赛';
+        state.gPool.forEach(g => g.used = 0);
+        localStorage.setItem('wotagei-tournament-state', JSON.stringify({ players: state.players, gPool: state.gPool, songs: state.songs, roundName: state.roundName, format: state.format, matchMode: state.matchMode }));
+        state.currentMatchIndex = 0;
+        state.matches = [];
+        state.currentStageIndex = 0;
+        generateStages();
+        transitionTo(Phase.ROUND_SHOW);
+    });
+
+    function generateStages() {
+        state.stages = [];
+        const playerCount = state.players.length;
+        // Use preview stages if available, otherwise generate defaults
+        const previewStages = state.previewStages || [];
+        switch (state.format) {
+            case 'single':
+                let remaining = playerCount;
+                let roundNum = 1;
+                let previewIndex = 0;
+                while (remaining > 1) {
+                    const nextRound = Math.ceil(remaining / 2);
+                    const preview = previewStages[previewIndex] || {};
+                    state.stages.push({
+                        name: preview.name || (remaining + ' - ' + nextRound),
+                        format: 'single',
+                        matchMode: preview.matchMode || state.matchMode,
+                        songSource: preview.songSource || 'random',
+                        techSource: preview.techSource || 'draw',
+                        bgStyle: preview.bgStyle || 'particle',
+                        round: roundNum,
+                        matchesNeeded: Math.floor(remaining / 2)
+                    });
+                    remaining = nextRound;
+                    roundNum++;
+                    previewIndex++;
+                }
+                break;
+            case 'double':
+                let wb = playerCount;
+                let roundNum2 = 1;
+                let previewIndex2 = 0;
+                while (wb > 1) {
+                    const nextWB = Math.ceil(wb / 2);
+                    const preview = previewStages[previewIndex2] || {};
+                    state.stages.push({
+                        name: preview.name || ('WB ' + wb + ' - ' + nextWB),
+                        format: 'double',
+                        matchMode: preview.matchMode || state.matchMode,
+                        songSource: preview.songSource || 'random',
+                        techSource: preview.techSource || 'draw',
+                        bgStyle: preview.bgStyle || 'particle',
+                        round: roundNum2,
+                        bracket: 'winners',
+                        matchesNeeded: Math.floor(wb / 2)
+                    });
+                    wb = nextWB;
+                    roundNum2++;
+                    previewIndex2++;
+                }
+                break;
+            case 'swiss':
+                const swissRounds = Math.ceil(Math.log2(playerCount));
+                for (let i = 1; i <= swissRounds; i++) {
+                    const preview = previewStages[i - 1] || {};
+                    state.stages.push({
+                        name: preview.name || ('Swiss Round ' + i),
+                        format: 'swiss',
+                        matchMode: preview.matchMode || state.matchMode,
+                        songSource: preview.songSource || 'random',
+                        techSource: preview.techSource || 'draw',
+                        bgStyle: preview.bgStyle || 'particle',
+                        round: i,
+                        matchesNeeded: Math.floor(playerCount / 2)
+                    });
+                }
+                break;
+            case 'bo3':
+                const previewBO3 = previewStages[0] || {};
+                state.stages.push({
+                    name: previewBO3.name || 'BO3 Match',
+                    format: 'bo3',
+                    matchMode: previewBO3.matchMode || state.matchMode,
+                    songSource: previewBO3.songSource || 'random',
+                    techSource: previewBO3.techSource || 'draw',
+                    bgStyle: previewBO3.bgStyle || 'particle',
+                    round: 1,
+                    matchesNeeded: Math.floor(playerCount / 2),
+                    gamesNeeded: 2
+                });
+                break;
+            case 'bo5':
+                const previewBO5 = previewStages[0] || {};
+                state.stages.push({
+                    name: previewBO5.name || 'BO5 Match',
+                    format: 'bo5',
+                    matchMode: previewBO5.matchMode || state.matchMode,
+                    songSource: previewBO5.songSource || 'random',
+                    techSource: previewBO5.techSource || 'draw',
+                    bgStyle: previewBO5.bgStyle || 'particle',
+                    round: 1,
+                    matchesNeeded: Math.floor(playerCount / 2),
+                    gamesNeeded: 3
+                });
+                break;
+        }
+        // Set remaining players for first stage
+        state.remainingPlayers = [...state.players];
+        shuffleArray(state.remainingPlayers);
+    }
+
+    document.getElementById('btn-start-draw').addEventListener('click', () => {
+        if (state.remainingPlayers.length < 2) return;
+        document.getElementById('btn-start-draw').style.display = 'none';
+        const status = document.getElementById('draw-status');
+        status.textContent = 'MATCHING...';
+        status.classList.add('matching');
+        const firstIndex = Math.floor(Math.random() * state.remainingPlayers.length);
+        const firstName = state.remainingPlayers[firstIndex];
+        state.remainingPlayers.splice(firstIndex, 1);
+        const cards = document.querySelectorAll('.player-card');
+        cards.forEach(c => { if (c.textContent === firstName) { c.classList.add('selected'); } });
+        setTimeout(() => {
+            const slotMachine = document.getElementById('slot-machine');
+            slotMachine.classList.add('active');
+            const slotDisplay = document.getElementById('slot-display');
+            let slotInterval = setInterval(() => { slotDisplay.textContent = state.remainingPlayers[Math.floor(Math.random() * state.remainingPlayers.length)]; }, 60);
+            setTimeout(() => {
+                clearInterval(slotInterval);
+                const secondIndex = Math.floor(Math.random() * state.remainingPlayers.length);
+                const secondName = state.remainingPlayers[secondIndex];
+                state.remainingPlayers.splice(secondIndex, 1);
+                slotDisplay.textContent = secondName;
+                document.getElementById('slot-display-right').textContent = firstName;
+                setTimeout(() => {
+                    slotMachine.classList.remove('active');
+                    const result = document.getElementById('match-result');
+                    document.getElementById('match-result-left').textContent = firstName;
+                    document.getElementById('match-result-right').textContent = secondName;
+                    result.classList.add('active');
+                    status.textContent = 'MATCH CONFIRMED';
+                    status.classList.remove('matching');
+                    const firstAttack = Math.random() < 0.5 ? 1 : 2;
+                    state.currentDrawMatch = { 
+                        player1: firstName, 
+                        player2: secondName, 
+                        song: null, 
+                        g1: null, 
+                        g2: null, 
+                        firstAttack: firstAttack,
+                        stageIndex: state.currentStageIndex,
+                        format: state.format,
+                        matchMode: state.matchMode
+                    };
+                    setTimeout(() => transitionTo(Phase.SONG_DRAW), 2000);
+                }, 300);
+            }, 2500);
+        }, 500);
+    });
+
+    document.getElementById('btn-stop-song').addEventListener('click', () => {
+        if (songSlotInterval) { clearInterval(songSlotInterval); songSlotInterval = null; }
+        const availableSongs = state.songs.filter(s => !state.matches.some(m => m.song === s));
+        const song = availableSongs.length > 0 ? availableSongs[Math.floor(Math.random() * availableSongs.length)] : state.songs[Math.floor(Math.random() * state.songs.length)];
+        const display = document.getElementById('song-slot-display');
+        display.classList.remove('spinning');
+        display.textContent = song;
+        state.currentDrawMatch.song = song;
+        document.getElementById('btn-stop-song').style.display = 'none';
+        setTimeout(() => { state.currentGPlayer = 1; transitionTo(Phase.G_DRAW); }, 1500);
+    });
+
+    document.getElementById('g-draw-grid').addEventListener('click', (e) => {
+        const item = e.target.closest('.g-draw-item');
+        if (!item || item.classList.contains('depleted')) return;
+        const index = parseInt(item.dataset.index);
+        const g = state.gPool[index];
+        const playerName = state.currentGPlayer === 1 ? state.currentDrawMatch.player1 : state.currentDrawMatch.player2;
+        document.getElementById('g-confirm-text').textContent = `${playerName} 选择了 ${g.name}`;
+        document.getElementById('g-confirm-modal').classList.add('active');
+        document.getElementById('g-confirm-modal').dataset.gIndex = index;
+    });
+
+    document.getElementById('g-confirm-ok').addEventListener('click', () => {
+        const modal = document.getElementById('g-confirm-modal');
+        const gIndex = parseInt(modal.dataset.gIndex);
+        const g = state.gPool[gIndex];
+        g.used++;
+        if (state.currentGPlayer === 1) {
+            state.currentDrawMatch.g1 = g.name;
+            state.currentGPlayer = 2;
+            modal.classList.remove('active');
+            onEnterGDraw();
+        } else {
+            state.currentDrawMatch.g2 = g.name;
+            modal.classList.remove('active');
+            transitionTo(Phase.FINAL_SHOW);
+        }
+    });
+
+    document.getElementById('g-confirm-cancel').addEventListener('click', () => {
+        document.getElementById('g-confirm-modal').classList.remove('active');
+    });
+
+    // Result entry buttons
+    document.getElementById('btn-win-p1').addEventListener('click', () => {
+        state.currentDrawMatch.winner = state.currentDrawMatch.player1;
+        document.getElementById('result-player1-box').classList.add('winner');
+        document.getElementById('result-player2-box').classList.remove('winner');
+        setTimeout(() => nextMatch(), 1000);
+    });
+
+    document.getElementById('btn-win-p2').addEventListener('click', () => {
+        state.currentDrawMatch.winner = state.currentDrawMatch.player2;
+        document.getElementById('result-player2-box').classList.add('winner');
+        document.getElementById('result-player1-box').classList.remove('winner');
+        setTimeout(() => nextMatch(), 1000);
+    });
+
+    document.getElementById('btn-draw').addEventListener('click', () => {
+        state.currentDrawMatch.winner = 'draw';
+        setTimeout(() => nextMatch(), 500);
+    });
+
+    function nextMatch() {
+        state.matches.push({ ...state.currentDrawMatch });
+        state.currentMatchIndex++;
+        document.getElementById('footer-match-count').textContent = state.matches.length;
+        
+        // Check if current stage is complete
+        const currentStage = state.stages[state.currentStageIndex];
+        if (currentStage) {
+            const stageMatches = state.matches.filter(m => m.stageIndex === state.currentStageIndex);
+            if (stageMatches.length < currentStage.matchesNeeded && state.remainingPlayers.length >= 2) {
+                transitionTo(Phase.MATCH_DRAW);
+                return;
+            }
+        }
+        
+        // Move to next stage or end tournament
+        state.currentStageIndex++;
+        if (state.currentStageIndex < state.stages.length) {
+            const nextStage = state.stages[state.currentStageIndex];
+            state.roundName = nextStage.name;
+            // For single elimination, remaining players are winners from previous stage
+            if (state.format === 'single') {
+                const winners = state.matches
+                    .filter(m => m.stageIndex === state.currentStageIndex - 1 && m.winner && m.winner !== 'draw')
+                    .map(m => m.winner);
+                state.remainingPlayers = winners;
+                shuffleArray(state.remainingPlayers);
+            } else {
+                state.remainingPlayers = [...state.players];
+                shuffleArray(state.remainingPlayers);
+            }
+            state.currentMatchIndex = 0;
+            transitionTo(Phase.ROUND_SHOW);
+        } else {
+            transitionTo(Phase.CHAMPION);
+        }
+    }
+
+    document.getElementById('btn-next-match').addEventListener('click', nextMatch);
+
+    document.getElementById('btn-fullscreen').addEventListener('click', () => {
+        if (!document.fullscreenElement) { document.documentElement.requestFullscreen().catch(() => {}); }
+        else { document.exitFullscreen().catch(() => {}); }
+    });
+
+    // Stage mode toggle
+    document.getElementById('btn-stage-mode').addEventListener('click', () => {
+        document.getElementById('app').classList.toggle('stage-mode');
+    });
+
+    // History panel
+    document.getElementById('btn-history').addEventListener('click', () => {
+        document.getElementById('history-panel').classList.toggle('open');
+        renderHistory();
+    });
+    document.getElementById('btn-history-close').addEventListener('click', () => {
+        document.getElementById('history-panel').classList.remove('open');
+    });
+    document.getElementById('btn-history-clear').addEventListener('click', () => {
+        state.matches = [];
+        state.currentMatchIndex = 0;
+        document.getElementById('footer-match-count').textContent = '0';
+        renderHistory();
+    });
+
+    function renderHistory() {
+        const list = document.getElementById('history-list');
+        if (state.matches.length === 0) {
+            list.innerHTML = '<div class="history-empty">暂无比赛记录</div>';
+            return;
+        }
+        list.innerHTML = '';
+        state.matches.forEach((m, i) => {
+            const item = document.createElement('div');
+            item.className = 'history-item';
+            const isDraw = m.winner === 'draw';
+            const p1Win = m.winner === m.player1;
+            const p2Win = m.winner === m.player2;
+            const winnerTag = isDraw
+                ? '<span class="history-item-draw">DRAW</span>'
+                : `<span class="history-item-winner">WIN: ${escapeHtml(m.winner)}</span>`;
+            item.innerHTML = `
+                <div class="history-item-top">
+                    <span class="history-item-match">MATCH #${i + 1}</span>
+                    ${winnerTag}
+                </div>
+                <div class="history-item-players">
+                    <span class="history-item-p1 ${p1Win ? 'winner' : ''}">${escapeHtml(m.player1)}</span>
+                    <span class="history-item-vs">VS</span>
+                    <span class="history-item-p2 ${p2Win ? 'winner' : ''}">${escapeHtml(m.player2)}</span>
+                </div>
+                <div class="history-item-details">
+                    <span><span class="detail-label">Song</span> ${escapeHtml(m.song || '-')}</span>
+                    <span><span class="detail-label">G</span> ${escapeHtml(m.g1 || '-')} / ${escapeHtml(m.g2 || '-')}</span>
+                </div>
+            `;
+            list.appendChild(item);
+        });
+    }
+
+    // Config export/import
+    document.getElementById('btn-export-config').addEventListener('click', () => {
+        const config = {
+            players: state.players,
+            gPool: state.gPool.map(g => ({name: g.name, max: g.max})),
+            songs: state.songs,
+            roundName: state.roundName,
+            exportDate: new Date().toISOString()
+        };
+        const data = JSON.stringify(config, null, 2);
+        const blob = new Blob([data], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'tournament-config.json';
+        a.click();
+        URL.revokeObjectURL(url);
+    });
+
+    document.getElementById('btn-import-config').addEventListener('click', () => {
+        document.getElementById('file-import').click();
+    });
+
+    document.getElementById('file-import').addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            try {
+                const config = JSON.parse(ev.target.result);
+                if (config.players) state.players = config.players;
+                if (config.gPool) state.gPool = config.gPool.map(g => ({...g, used: 0}));
+                if (config.songs) state.songs = config.songs;
+                if (config.roundName) state.roundName = config.roundName;
+                initConfig();
+            } catch (err) {
+                alert('配置文件格式错误');
+            }
+        };
+        reader.readAsText(file);
+        e.target.value = '';
+    });
+
+    // Splash screen buttons
+    document.getElementById('btn-splash-start').addEventListener('click', () => {
+        state.gPool.forEach(g => g.used = 0);
+        state.remainingPlayers = [...state.players];
+        shuffleArray(state.remainingPlayers);
+        state.currentMatchIndex = 0;
+        state.matches = [];
+        state.roundName = '16 - 8';
+        transitionTo(Phase.ROUND_SHOW);
+    });
+
+    document.getElementById('btn-splash-config').addEventListener('click', () => {
+        transitionTo(Phase.CONFIG);
+    });
+
+    // Champion screen buttons
+    document.getElementById('btn-champion-home').addEventListener('click', () => {
+        state.matches = [];
+        state.currentMatchIndex = 0;
+        state.gPool.forEach(g => g.used = 0);
+        document.getElementById('footer-match-count').textContent = '0';
+        transitionTo(Phase.SPLASH);
+    });
+
+    document.getElementById('btn-champion-export').addEventListener('click', () => {
+        const data = JSON.stringify({ matches: state.matches, players: state.players, date: new Date().toISOString() }, null, 2);
+        const blob = new Blob([data], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'tournament-results.json';
+        a.click();
+        URL.revokeObjectURL(url);
+    });
+
+    function shuffleArray(arr) { for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; } return arr; }
+
+    document.addEventListener('keydown', (e) => {
+        if (e.code === 'Space') {
+            e.preventDefault();
+            if (state.currentPhase === Phase.MATCH_DRAW) document.getElementById('btn-start-draw').click();
+            else if (state.currentPhase === Phase.SONG_DRAW) document.getElementById('btn-stop-song').click();
+        }
+        if (e.code === 'Enter') { if (document.getElementById('g-confirm-modal').classList.contains('active')) document.getElementById('g-confirm-ok').click(); }
+        if (e.code === 'KeyF' && e.ctrlKey) { e.preventDefault(); document.getElementById('btn-fullscreen').click(); }
+        if (state.currentPhase === Phase.RESULT_ENTRY) {
+            if (e.code === 'Digit1') { e.preventDefault(); document.getElementById('btn-win-p1').click(); }
+            if (e.code === 'Digit2') { e.preventDefault(); document.getElementById('btn-win-p2').click(); }
+            if (e.code === 'Digit3') { e.preventDefault(); document.getElementById('btn-draw').click(); }
+        }
+        if (e.code === 'KeyS' && !e.ctrlKey && !e.altKey && state.currentPhase !== Phase.CONFIG) {
+            const activeEl = document.activeElement;
+            if (activeEl.tagName !== 'INPUT' && activeEl.tagName !== 'TEXTAREA') {
+                e.preventDefault();
+                document.getElementById('app').classList.toggle('stage-mode');
+            }
+        }
+    });
+
+    // Init
+    function init() {
+        transitionTo(Phase.SPLASH);
+        try {
+            const saved = localStorage.getItem('wotagei-tournament-state');
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                if (parsed.players) state.players = parsed.players;
+                if (parsed.gPool) state.gPool = parsed.gPool.map(g => ({...g, used: 0}));
+                if (parsed.songs) state.songs = parsed.songs;
+                if (parsed.roundName) state.roundName = parsed.roundName;
+                if (parsed.format) {
+                    state.format = parsed.format;
+                    document.querySelectorAll('#format-selector .selector-btn').forEach(b => {
+                        b.classList.toggle('active', b.dataset.format === state.format);
+                    });
+                    document.getElementById('format-desc').textContent = FORMAT_DESC[state.format];
+                }
+                if (parsed.matchMode) {
+                    state.matchMode = parsed.matchMode;
+                    document.querySelectorAll('#mode-selector .selector-btn').forEach(b => {
+                        b.classList.toggle('active', b.dataset.mode === state.matchMode);
+                    });
+                    document.getElementById('mode-desc').textContent = MODE_DESC[state.matchMode];
+                }
+            }
+        } catch (e) {}
+    }
+    init();
+    </script>
+</body>
+</html>
