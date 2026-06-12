@@ -4,3 +4,35 @@ CLAUDE规范/
 
 # Claude Code 本地配置
 .claude/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/*.egg-info/
+
+# PyInstaller
+*.spec
+
+# Pytest
+.pytest_cache/
+
+# Build (PyInstaller)
+build/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# exe 打包程序（可选，取消注释则不包含）
+# exe/
