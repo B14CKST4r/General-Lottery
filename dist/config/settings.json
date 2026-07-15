@@ -8,8 +8,9 @@
   "background_color": "#1E1B4B",
   "background_image": "",
   "drawing_mode": "single",
-  "multi_count": 3,
+  "multi_count": 1,
   "allow_duplicate": false,
+  "save_results": true,
   "shortcuts": {
     "start_draw": "Space",
     "reset_draw": "R",
